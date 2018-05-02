@@ -10,7 +10,7 @@ var build = require('./build-module');
 
 // Parse arguments:
 var argv = require('yargs')
-.usage('node build.js [--minify] [--ignore=<modules>...|--only=<modules>...]')
+.usage('node build.js [--minify] [--es6] [--ignore=<modules>...|--only=<modules>...]')
 .options({
   minify: {
     alias: 'm',
@@ -26,6 +26,11 @@ var argv = require('yargs')
   only: {
     type: 'array',
     describe: 'Only include the given module(s) in the bundle'
+  },
+  es6: {
+    type: 'boolean',
+    default: false,
+    describe: 'Create es6 version'
   }
 })
 .coerce(['ignore', 'only'], getModuleNames)

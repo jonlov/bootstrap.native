@@ -44,15 +44,25 @@ module.exports = (options) => {
     error(`Error: No valid module names, aborting`);
   }
 
-  // Use console.warn to avoid writing to stdout
-  console.warn(`Building Native JavaScript for Bootstrap 3 ${version} ..`);
-  if (options.minify) {
-    console.warn('Minified Build');
+  if (options.es6) {
+      // Use console.warn to avoid writing to stdout
+      console.warn(`Building Native ES6 JavaScript for Bootstrap 3 ${version} ..`);
+      if (options.minify) {
+        console.warn('Minified Build');
+      } else {
+        console.warn('Unminified Build');
+      }
   } else {
-    console.warn('Unminified Build');
+      // Use console.warn to avoid writing to stdout
+      console.warn(`Building Native JavaScript for Bootstrap 3 ${version} ..`);
+      if (options.minify) {
+        console.warn('Minified Build');
+      } else {
+        console.warn('Unminified Build');
+      }
+      console.warn(`Included modules:
+        ${modules.join('\n  ')}`);
   }
-  console.warn(`Included modules:
-    ${modules.join('\n  ')}`);
 
   // Load modules:
   // Use Promises to avoid race conditions
@@ -61,6 +71,12 @@ module.exports = (options) => {
     promises[i] = new Promise(function (resolve, reject) {
       fs.readFile(`${libPath}/V3/${name.toLowerCase()}-native.js`, 'utf8', function (err, contents) {
         if (err) reject(err);
+
+        // remove all the top level "var" to "export const" for es6 support
+        if (options.es6) {
+          contents = contents.replace(/var /m, 'export const ');
+        }
+
         resolve(contents);
       });
     });
@@ -70,6 +86,10 @@ module.exports = (options) => {
   .then(function (modules) {
     var header = '// Native Javascript for Bootstrap 3 ' + version + ' | © dnp_theme | ' + license + '\n';
     var bundle = wrap(modules.join(''));
+    if (options.es6) {
+      // remove 'supports[push](' lines for es6 support
+      bundle = bundle.replace(/^.*supports\[push\]\(.*$/mg, '')
+    }
     if (options.minify) {
       bundle = uglify.minify(bundle, {fromString: true}).code;
     }
@@ -97,6 +117,16 @@ module.exports = (options) => {
       rootAttachments.push(`root.${name} = bsn.${name};`);
       returns.push(`${name}: ${name}`);
     });
+
+    // Custom ES6 Template:
+    if (options.es6) {
+        return `
+            // CommonJS-like:
+            ${utils}
+            BSN.version = '${pack.version}';
+            ${main}
+          `;
+    }
 
 // Custom UMD Template:
 return `(function (root, factory) {
